@@ -15,7 +15,10 @@ def parse_date(date_str: str):
 
 def safe_int(value) -> int | None:
     if isinstance(value, str):
-        return 0
+        try:
+            return int(value)
+        except ValueError:
+            return 0
     elif value is None or value == "":
         return 0
     else:
