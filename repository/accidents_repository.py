@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from pymongo.errors import PyMongoError
 from returns.result import Success, Failure
 
 from database.connect import areas, daily
@@ -9,7 +8,7 @@ from database.connect import areas, daily
 def get_all_accidents_by_area(area):
     try:
         all_accidents = areas.find_one({'area': area})
-        return Success(all_accidents)
+        return Success({"total_accidents": all_accidents['total_accidents']})
     except PyMongoError as e:
         return Failure(str(e))
 
@@ -71,5 +70,42 @@ def get_all_accidents_by_area_cause(area):
     try:
         all_accidents = areas.find({'area': area}, {'contributing_factors': 1, '_id': 0})
         return Success(all_accidents[0]["contributing_factors"])
+    except PyMongoError as e:
+        return Failure(str(e))
+
+
+from pymongo.errors import PyMongoError
+
+
+def get_area_stats(area_name):
+    try:
+        area_data = areas.find_one({'area': area_name})
+        if not area_data:
+            return Failure({'error': 'Area not found'}), 404
+
+        total_accidents = area_data.get('total_accidents', 0)
+        total_injuries = area_data.get('injuries', {}).get('total', 0)
+        fatal_injuries = area_data.get('injuries', {}).get('fatal', 0)
+        non_fatal_injuries = area_data.get('injuries', {}).get('non_fatal', 0)
+
+        events = daily.find({'area': area_name}, {'_id': 0, 'date': 1, 'injuries': 1, 'contributing_factors': 1})
+        fatal_events = []
+        non_fatal_events = []
+        for event in events:
+            if event['injuries']['fatal'] > 0:
+                fatal_events.append(event)
+            elif event['injuries']['non_fatal'] > 0:
+                non_fatal_events.append(event)
+
+        result = {
+            'area': area_name,
+            'total_accidents': total_accidents,
+            'total_injuries': total_injuries,
+            'fatal_injuries': fatal_injuries,
+            'non_fatal_injuries': non_fatal_injuries,
+            'fatal_events': fatal_events,
+            'non_fatal_events': non_fatal_events
+        }
+        return Success(result)
     except PyMongoError as e:
         return Failure(str(e))

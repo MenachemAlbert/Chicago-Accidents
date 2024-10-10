@@ -13,9 +13,14 @@ def read_csv(path: str):
 
 
 def init_accidents():
+
+    daily.drop()
+    weakly.drop()
+    monthly.drop()
+    areas.drop()
+
     data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'data.csv')
     for row in read_csv(data_path):
-
         crash_date = parse_date(row['CRASH_DATE'])
         area = row['BEAT_OF_OCCURRENCE']
 
@@ -45,7 +50,8 @@ def init_accidents():
                 f'contributing_factors.{row["PRIM_CONTRIBUTORY_CAUSE"]}': 1
             }
         }
-        weakly.update_one({'week_start': str(week_start), 'week_end': str(week_end), 'area': area}, {'$inc': weekly_doc['$inc']}, upsert=True)
+        weakly.update_one({'week_start': str(week_start), 'week_end': str(week_end), 'area': area},
+                          {'$inc': weekly_doc['$inc']}, upsert=True)
 
         monthly_doc = {
             'year': str(crash_date.year),
@@ -59,9 +65,9 @@ def init_accidents():
                 f'contributing_factors.{row["PRIM_CONTRIBUTORY_CAUSE"]}': 1
             }
         }
-        monthly.update_one({'year': str(crash_date.year), 'month': str(crash_date.month), 'area': area}, {'$inc': monthly_doc['$inc']}, upsert=True)
+        monthly.update_one({'year': str(crash_date.year), 'month': str(crash_date.month), 'area': area},
+                           {'$inc': monthly_doc['$inc']}, upsert=True)
 
-        # עדכון מסמכי areas
         update_query = {'area': area}
         update_area = {
             '$inc': {
@@ -73,6 +79,3 @@ def init_accidents():
             }
         }
         areas.update_one(update_query, update_area, upsert=True)
-
-
-init_accidents()
